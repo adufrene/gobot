@@ -1,4 +1,4 @@
-package api
+package gobot
 
 type SlackMessage struct {
 	Type string `json:"type"`
@@ -69,10 +69,6 @@ type SlackProfile struct {
 	Image512           string `json:"image_512"`
 	Image1024          string `json:"image_1024"`
 	ImageOriginal      string `json:"image_original"`
-}
-
-type Configuration struct {
-	ApiToken string `yaml:"apiToken"`
 }
 
 type gobot struct {

@@ -1,9 +1,9 @@
-package api_test
+package gobot_test
 
 import (
 	"flag"
 	"fmt"
-	. "github.com/adufrene/gobot/api"
+	. "github.com/adufrene/gobot"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
