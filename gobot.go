@@ -1,57 +1,52 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
+	"github.com/adufrene/gobot/api"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"net/http"
+	"os"
 )
-
-const (
-	API_TOKEN = "xoxb-12456280647-vKyUQvjTf3BH2aUhUux2qWF3"
-)
-
-type slackStart struct {
-	Okay bool   `json:"ok"`
-	URL  string `json:"url"`
-}
 
 func main() {
-	resp, err := http.Get("https://slack.com/api/rtm.start?token=" + API_TOKEN)
+	apiToken, err := readApiToken()
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Error reading api token: %s\n", err.Error())
+		os.Exit(1)
 	}
+	gobot := api.NewGobot(apiToken)
+	gobot.RegisterPresenceChangeFunction(changedPresence)
+	gobot.RegisterAllMessageFunction(printMessage)
+	gobot.RegisterMessageFunction(echoMessage)
+	if err = gobot.Listen(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while listening: %s\n", err.Error())
+		os.Exit(1)
+	}
+}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-
-	//	fmt.Println(string(body))
-
-	var start slackStart
-	err = json.Unmarshal(body, &start)
-
+func readApiToken() (string, error) {
+	file, err := ioutil.ReadFile("configuration.yaml")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-
-	requestHeader := http.Header{
-		"Origin":               {"http://127.0.0.1:80"},
-		"WebSocket-Extensions": {"permessage-deflate; client_max_window_bits, x-webkit-deflate-frame"},
+	var conf api.Configuration
+	if err = yaml.Unmarshal(file, &conf); err != nil {
+		return "", err
 	}
+	return conf.ApiToken, nil
+}
 
-	var defaultDialer *websocket.Dialer
-	conn, resp, err := defaultDialer.Dial(start.URL, requestHeader)
+func echoMessage(slackApi api.SlackApi, message api.Message) {
+	slackApi.PostMessage(message.Channel, message.Text)
+}
 
-	if err != nil {
-		panic(err)
-	}
+func printMessage(slackApi api.SlackApi, message api.Message) {
+	fmt.Printf("%s: %s\n", message.User, message.Text)
+}
 
-	for {
-		msgType, msg, err := conn.ReadMessage()
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("%v, %s\n", msgType, msg)
+func changedPresence(slackApi api.SlackApi, presenceChange api.PresenceChange) {
+	user, err := slackApi.GetUser(presenceChange.User)
+	if err == nil {
+		fmt.Println(user.Name + " changed status to " + presenceChange.Presence)
 	}
 }
