@@ -1,10 +1,12 @@
 package gobot
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"time"
 )
 
 // TODO: Create noop functions as default functions, so we don't need to check nil
@@ -54,16 +56,18 @@ func (g *gobot) Listen() (err error) {
 
 	conn := start.openWebSocket()
 
+	healthChecks(conn)
+
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			return err
 		}
-		var msgType SlackMessage
-		if err = json.Unmarshal(msg, &msgType); err != nil {
+		var msgType unmarshalled
+		if err = json.Unmarshal(bytes.TrimRightFunc(msg, func(r rune) bool { return r == '\x00' }), &msgType); err != nil {
 			return err
 		}
-		g.delegate(msgType.Type, msg)
+		go g.delegate(msgType.Type, msg)
 	}
 }
 
@@ -76,6 +80,20 @@ func (start slackStart) openWebSocket() *websocket.Conn {
 	}
 
 	return conn
+}
+
+func healthChecks(conn *websocket.Conn) {
+	go func() {
+		id := 2
+		ping := ping{id: id}
+		ping.Type = "ping"
+		for {
+			time.Sleep(5 * time.Second)
+			conn.WriteJSON(ping)
+			id++
+			ping.id = id
+		}
+	}()
 }
 
 func (g *gobot) delegate(msgType string, msg []byte) {
@@ -105,7 +123,9 @@ func (g *gobot) delegate(msgType string, msg []byte) {
 			json.Unmarshal(msg, &userTyping)
 			g.userTypingFunc(g.slackApi, userTyping)
 		}
+	case "pong":
+		// do nothing
 	default:
-		fmt.Println(string(msg))
+		fmt.Printf("Received unknown message: %s\n", string(msg))
 	}
 }

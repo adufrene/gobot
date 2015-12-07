@@ -1,27 +1,29 @@
 package gobot
 
-type SlackMessage struct {
+import "encoding/json"
+
+type slackMessage struct {
 	Type string `json:"type"`
 }
 
-type Hello struct {
-	SlackMessage
+type hello struct {
+	slackMessage
 }
 
 type PresenceChange struct {
-	SlackMessage
+	slackMessage
 	User     string `json:"user"`
 	Presence string `json:"presence"`
 }
 
 type UserTyping struct {
-	SlackMessage
+	slackMessage
 	Channel string `json:"channel"`
 	User    string `json:"user"`
 }
 
 type Message struct {
-	SlackMessage
+	slackMessage
 	Channel   string `json:"channel"`
 	User      string `json:"user"`
 	Text      string `json:"text"`
@@ -102,4 +104,14 @@ type slackUser struct {
 type slackUsers struct {
 	slackResponse
 	Users []SlackUser `json:"members"`
+}
+
+type ping struct {
+	slackMessage
+	id int
+}
+
+type unmarshalled struct {
+	slackMessage
+	Data json.RawMessage
 }
