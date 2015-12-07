@@ -73,6 +73,7 @@ type SlackProfile struct {
 
 type gobot struct {
 	slackApi           SlackApi
+	setupFunc          func(SlackApi)
 	messageFunc        func(SlackApi, Message)
 	allMessageFunc     func(SlackApi, Message)
 	presenceChangeFunc func(SlackApi, PresenceChange)
@@ -96,4 +97,9 @@ type slackStart struct {
 type slackUser struct {
 	slackResponse
 	User SlackUser `json:"user"`
+}
+
+type slackUsers struct {
+	slackResponse
+	Users []SlackUser `json:"members"`
 }

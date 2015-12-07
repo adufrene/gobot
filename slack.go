@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 const (
@@ -43,11 +44,45 @@ func (slackApi SlackApi) GetUser(userId string) (SlackUser, error) {
 	return user.User, nil
 }
 
-func (slackApi SlackApi) PostMessage(channel, message string) {
-	slackApi.get("chat.postMessage", map[string]string{
+func (slackApi SlackApi) GetUsersInTeam() ([]SlackUser, error) {
+	body, err := slackApi.get("users.list", map[string]string{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	slackUsers := slackUsers{}
+	if err := json.Unmarshal(body, &slackUsers); err != nil {
+		return nil, err
+	}
+	users := make([]SlackUser, len(slackUsers.Users))
+	for _, user := range slackUsers.Users {
+		if !user.Deleted {
+			users = append(users, user)
+		}
+	}
+	return users, nil
+}
+
+func (slackApi SlackApi) PostMessage(channel, message string) ([]byte, error) {
+	return slackApi.get("chat.postMessage", map[string]string{
 		"channel": channel,
 		"text":    message,
 	})
+}
+
+func (slackApi SlackApi) Whoami() (SlackUser, error) {
+	resp, err := slackApi.get("auth.test", nil)
+	if err != nil {
+		return SlackUser{}, err
+	}
+
+	var jsonMap map[string]interface{}
+	if err = json.Unmarshal(resp, &jsonMap); err != nil {
+		return SlackUser{}, err
+	}
+
+	return slackApi.GetUser(jsonMap["user_id"].(string))
 }
 
 func NewSlackApi(apiToken string) (api SlackApi) {
@@ -77,18 +112,18 @@ func (slackApi SlackApi) verifyApiToken() error {
 
 func (slackApi SlackApi) get(endpoint string, params map[string]string) ([]byte, error) {
 	slackApi.verifyApiToken()
-	url := BASE_URL + endpoint + "?token=" + slackApi.token
+	requestUrl := BASE_URL + endpoint + "?token=" + slackApi.token
 
 	for key, value := range params {
-		paramString := "&" + key + "=" + value
-		url += paramString
+		paramString := "&" + url.QueryEscape(key) + "=" + url.QueryEscape(value)
+		requestUrl += paramString
 	}
 
 	if VERBOSE {
-		fmt.Println("Making GET request for " + url)
+		fmt.Println("Making GET request for " + requestUrl)
 	}
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(requestUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -96,18 +131,4 @@ func (slackApi SlackApi) get(endpoint string, params map[string]string) ([]byte,
 	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
-}
-
-func (slackApi SlackApi) whoami() (SlackUser, error) {
-	resp, err := slackApi.get("auth.test", nil)
-	if err != nil {
-		return SlackUser{}, err
-	}
-
-	var jsonMap map[string]interface{}
-	if err = json.Unmarshal(resp, &jsonMap); err != nil {
-		return SlackUser{}, err
-	}
-
-	return slackApi.GetUser(jsonMap["user_id"].(string))
 }

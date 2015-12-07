@@ -13,6 +13,16 @@ func NewGobot(apiToken string) (gBot gobot) {
 	return
 }
 
+func (g *gobot) RegisterSetupFunction(setupFunction func(SlackApi)) {
+	oldSetup := g.setupFunc
+	g.setupFunc = func(slackApi SlackApi) {
+		setupFunction(slackApi)
+		if oldSetup != nil {
+			oldSetup(slackApi)
+		}
+	}
+}
+
 func (g *gobot) RegisterMessageFunction(messageFunc func(SlackApi, Message)) {
 	g.messageFunc = messageFunc
 }
@@ -36,6 +46,10 @@ func (g *gobot) Listen() (err error) {
 	}
 	if !start.Okay {
 		return fmt.Errorf("Real-Time Messaging failed to start, aborting")
+	}
+
+	if g.setupFunc != nil {
+		g.setupFunc(g.slackApi)
 	}
 
 	conn := start.openWebSocket()

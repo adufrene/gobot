@@ -37,7 +37,7 @@ func readApiToken() (string, error) {
 	if err = yaml.Unmarshal(file, &conf); err != nil {
 		return "", err
 	}
-	return conf.ApiToken, nil
+	return conf.Token, nil
 }
 
 func echoMessage(slackApi gobot.SlackApi, message gobot.Message) {
