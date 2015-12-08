@@ -93,7 +93,8 @@ type slackAuthResponse struct {
 
 type slackStart struct {
 	slackResponse
-	URL string `json:"url"`
+	URL   string `json:"url"`
+	Error string `json:"error"`
 }
 
 type slackUser struct {

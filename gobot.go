@@ -47,7 +47,7 @@ func (g *gobot) Listen() (err error) {
 		return
 	}
 	if !start.Okay {
-		return fmt.Errorf("Real-Time Messaging failed to start, aborting")
+		return fmt.Errorf("Real-Time Messaging failed to start, aborting: %s", start.Error)
 	}
 
 	if g.setupFunc != nil {
